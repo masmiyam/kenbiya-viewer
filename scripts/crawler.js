@@ -3,8 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 const OUTPUT_PATH = path.join(__dirname, "../data/properties.json");
-const MAX_PAGES = parseInt(process.env.MAX_PAGES || "10");
-const DELAY_MS = 2000;
+const MAX_PAGES = parseInt(process.env.MAX_PAGES || "700");
+const DELAY_MS = 1500;
 
 async function main() {
   console.log(`[${new Date().toISOString()}] Crawler started`);
