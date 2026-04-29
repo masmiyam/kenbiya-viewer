@@ -6,6 +6,22 @@ const DAILY_DIR = path.join(__dirname, "../data/daily");
 const LATEST_PATH = path.join(__dirname, "../data/latest.json");
 const MAX_PAGES = parseInt(process.env.MAX_PAGES || "700");
 const DELAY_MS = parseInt(process.env.DELAY_MS || "1500");
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || "5");
+const DETAIL_DELAY_MS = parseInt(process.env.DETAIL_DELAY_MS || "500");
+const SKIP_DETAIL = process.env.SKIP_DETAIL === "true" || process.env.SKIP_DETAIL === "1";
+const FORCE_REFRESH = process.env.FORCE_REFRESH === "true" || process.env.FORCE_REFRESH === "1";
+
+function categorizeStructure(raw) {
+  if (!raw) return null;
+  const s = raw.replace(/\s/g, "");
+  if (/SRC造/.test(s)) return "SRC造";
+  if (/RC造|鉄筋コンクリート/.test(s)) return "RC造";
+  if (/軽量鉄骨/.test(s)) return "軽量鉄骨造";
+  if (/S造|鉄骨造|重量鉄骨/.test(s)) return "S造";
+  if (/木造/.test(s)) return "木造";
+  if (/鉄骨/.test(s)) return "S造";
+  return "その他";
+}
 
 function jstDateStr() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
@@ -106,13 +122,102 @@ function postProcess(p) {
     builtMonth,
     buildingAgeYears,
     floorsLabel: p.floorsLabel,
+    structure: null,
+    structureRaw: null,
     url,
     crawledAt: new Date().toISOString(),
   };
 }
 
+async function fetchDetails(context, properties) {
+  if (SKIP_DETAIL) {
+    console.log("SKIP_DETAIL=true: skipping detail fetch");
+    return;
+  }
+
+  const cache = new Map();
+  if (!FORCE_REFRESH && fs.existsSync(LATEST_PATH)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(LATEST_PATH, "utf8"));
+      for (const p of prev.properties || []) {
+        if (p.id && p.structureRaw) {
+          cache.set(p.id, { structure: p.structure, structureRaw: p.structureRaw });
+        }
+      }
+    } catch (e) {
+      console.log("Detail cache load failed:", e.message);
+    }
+  }
+  console.log(`Detail cache loaded: ${cache.size} entries`);
+
+  for (const p of properties) {
+    const c = cache.get(p.id);
+    if (c) {
+      p.structure = c.structure;
+      p.structureRaw = c.structureRaw;
+    }
+  }
+
+  const targets = properties.filter((p) => p.id && p.url && !p.structureRaw);
+  console.log(`Detail fetch needed: ${targets.length} / ${properties.length}`);
+  if (targets.length === 0) return;
+
+  const queue = [...targets];
+  let processed = 0;
+  let consecutiveFailures = 0;
+  let aborted = false;
+
+  async function worker(workerId) {
+    const page = await context.newPage();
+    while (!aborted) {
+      const target = queue.shift();
+      if (!target) break;
+      try {
+        const resp = await page.goto(target.url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        if (resp && (resp.status() === 403 || resp.status() === 429)) {
+          console.error(`[w${workerId}] HTTP ${resp.status()} for ${target.id}, aborting`);
+          aborted = true;
+          break;
+        }
+        const raw = await page.evaluate(() => {
+          for (const dt of document.querySelectorAll("dt")) {
+            const label = dt.textContent.trim();
+            if (label === "建物構造/階数" || label === "建物構造") {
+              const dd = dt.nextElementSibling;
+              if (dd && dd.tagName === "DD") {
+                return dd.textContent.trim().replace(/\s+/g, " ");
+              }
+            }
+          }
+          return null;
+        });
+        target.structureRaw = raw;
+        target.structure = categorizeStructure(raw);
+        consecutiveFailures = 0;
+      } catch (e) {
+        consecutiveFailures++;
+        console.error(`[w${workerId}] ${target.id} failed: ${e.message}`);
+        if (consecutiveFailures >= 5) {
+          console.error("Too many consecutive failures, aborting workers");
+          aborted = true;
+          break;
+        }
+      }
+      processed++;
+      if (processed % 100 === 0) {
+        console.log(`Detail progress: ${processed} / ${targets.length}`);
+      }
+      await new Promise((r) => setTimeout(r, DETAIL_DELAY_MS));
+    }
+    await page.close().catch(() => {});
+  }
+
+  await Promise.all(Array.from({ length: CONCURRENCY }, (_, i) => worker(i)));
+  console.log(`Detail fetch done: ${processed} processed${aborted ? " (aborted)" : ""}`);
+}
+
 async function main() {
-  console.log(`[${new Date().toISOString()}] Crawler started (MAX_PAGES=${MAX_PAGES}, DELAY_MS=${DELAY_MS})`);
+  console.log(`[${new Date().toISOString()}] Crawler started (MAX_PAGES=${MAX_PAGES}, DELAY_MS=${DELAY_MS}, CONCURRENCY=${CONCURRENCY})`);
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -201,9 +306,10 @@ async function main() {
     }
   } catch (err) {
     console.error("Crawl error:", err.message);
-  } finally {
-    await browser.close();
   }
+
+  await fetchDetails(context, allProperties);
+  await browser.close();
 
   const dateStr = jstDateStr();
   const properties = allProperties
