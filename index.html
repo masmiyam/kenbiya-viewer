@@ -79,6 +79,7 @@
     .checkbox-list { display: flex; flex-direction: column; gap: 6px; }
     .checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
     .checkbox-item input { width: 14px; height: 14px; accent-color: var(--accent); }
+    .checkbox-item .count { margin-left: auto; color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
     .btn-reset {
       width: 100%; height: 34px;
       background: none; border: 0.5px solid var(--border);
@@ -184,14 +185,14 @@
     <div class="filter-section">
       <div class="filter-label">物件種別</div>
       <div class="checkbox-list" id="type-filters">
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りマンション" checked> 一棟マンション</label>
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りアパート" checked> 一棟アパート</label>
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りビル" checked> 一棟ビル</label>
-        <label class="checkbox-item"><input type="checkbox" value="投資用マンション" checked> 区分マンション</label>
-        <label class="checkbox-item"><input type="checkbox" value="戸建賃貸" checked> 戸建</label>
-        <label class="checkbox-item"><input type="checkbox" value="投資用土地・事業用土地" checked> 土地</label>
-        <label class="checkbox-item"><input type="checkbox" value="売り店舗・事務所" checked> 店舗・事務所</label>
-        <label class="checkbox-item"><input type="checkbox" value="売りホテル・ペンション" checked> ホテル・ペンション</label>
+        <label class="checkbox-item"><input type="checkbox" value="一棟売りマンション" checked> <span>一棟マンション</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="一棟売りアパート" checked> <span>一棟アパート</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="一棟売りビル" checked> <span>一棟ビル</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="投資用マンション" checked> <span>区分マンション</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="戸建賃貸" checked> <span>戸建</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="投資用土地・事業用土地" checked> <span>土地</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="売り店舗・事務所" checked> <span>店舗・事務所</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="売りホテル・ペンション" checked> <span>ホテル・ペンション</span><span class="count"></span></label>
       </div>
     </div>
     <div class="filter-section">
@@ -297,6 +298,16 @@ function fmtTraffic(p) {
 }
 function fmtLocation(p) { return p.address || p.prefecture || ""; }
 
+function updateTypeCounts() {
+  const counts = {};
+  allData.forEach(p => { if (p.type) counts[p.type] = (counts[p.type] || 0) + 1; });
+  document.querySelectorAll('#type-filters .checkbox-item').forEach(item => {
+    const value = item.querySelector('input').value;
+    const span = item.querySelector('.count');
+    span.textContent = (counts[value] || 0).toLocaleString();
+  });
+}
+
 async function loadData() {
   try {
     const res = await fetch('data/latest.json?t=' + Date.now());
@@ -313,6 +324,7 @@ async function loadData() {
       const o = document.createElement('option');
       o.value = p; o.textContent = p; sel.appendChild(o);
     });
+    updateTypeCounts();
     applyFilters();
   } catch (e) {
     document.getElementById('table-container').innerHTML =
