@@ -184,16 +184,7 @@
   <aside>
     <div class="filter-section">
       <div class="filter-label">物件種別</div>
-      <div class="checkbox-list" id="type-filters">
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りマンション" checked> <span>一棟マンション</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りアパート" checked> <span>一棟アパート</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="一棟売りビル" checked> <span>一棟ビル</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="投資用マンション" checked> <span>区分マンション</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="戸建賃貸" checked> <span>戸建</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="投資用土地・事業用土地" checked> <span>土地</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="売り店舗・事務所" checked> <span>店舗・事務所</span><span class="count"></span></label>
-        <label class="checkbox-item"><input type="checkbox" value="売りホテル・ペンション" checked> <span>ホテル・ペンション</span><span class="count"></span></label>
-      </div>
+      <div class="checkbox-list" id="type-filters"></div>
     </div>
     <div class="filter-section">
       <div class="filter-label">価格（万円）</div>
@@ -298,6 +289,38 @@ function fmtTraffic(p) {
 }
 function fmtLocation(p) { return p.address || p.prefecture || ""; }
 
+const TYPE_LABELS = {
+  '一棟売りマンション': '一棟マンション',
+  '一棟売りアパート':   '一棟アパート',
+  '一棟売りビル':       '一棟ビル',
+  '投資用マンション':   '区分マンション',
+  '戸建賃貸':           '戸建',
+  '投資用土地・事業用土地': '土地',
+  '売り店舗・事務所':   '店舗・事務所',
+  '売りホテル・ペンション': 'ホテル・ペンション',
+  '店舗付き住宅':       '店舗付き住宅',
+  '売り工場・倉庫・その他': '工場・倉庫',
+  '駐車場':             '駐車場',
+  '賃貸併用住宅':       '賃貸併用住宅',
+};
+
+function buildTypeFilters() {
+  const types = [...new Set(allData.map(p => p.type).filter(Boolean))];
+  const order = Object.keys(TYPE_LABELS);
+  types.sort((a, b) => {
+    const ai = order.indexOf(a), bi = order.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+  const html = types.map(t => {
+    const label = TYPE_LABELS[t] || t;
+    return '<label class="checkbox-item"><input type="checkbox" value="' + esc(t) + '" checked> <span>' + esc(label) + '</span><span class="count"></span></label>';
+  }).join('');
+  document.getElementById('type-filters').innerHTML = html;
+}
+
 function updateFilterCounts() {
   const typeCounts = {};
   const structCounts = {};
@@ -332,6 +355,7 @@ async function loadData() {
       const o = document.createElement('option');
       o.value = p; o.textContent = p; sel.appendChild(o);
     });
+    buildTypeFilters();
     updateFilterCounts();
     applyFilters();
   } catch (e) {
@@ -572,7 +596,8 @@ async function downloadExcel() {
   }
 }
 
-document.querySelectorAll('#type-filters input, #structure-filters input, #pref-filter').forEach(el =>
+document.getElementById('type-filters').addEventListener('change', applyFilters);
+document.querySelectorAll('#structure-filters input, #pref-filter').forEach(el =>
   el.addEventListener('change', applyFilters));
 ['price-min','price-max','yield-min','yield-max','age-max','walk-max','keyword'].forEach(id =>
   document.getElementById(id).addEventListener('input', applyFilters));
