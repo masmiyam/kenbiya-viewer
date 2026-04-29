@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const OUTPUT_PATH = path.join(__dirname, "../data/properties.json");
-const MAX_PAGES = parseInt(process.env.MAX_PAGES || "5");
+const MAX_PAGES = parseInt(process.env.MAX_PAGES || "10");
 const DELAY_MS = 2000;
 
 async function main() {
@@ -20,7 +20,7 @@ async function main() {
     for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
       const url = pageNum === 1
         ? "https://www.kenbiya.com/pp0/"
-        : `https://www.kenbiya.com/pp0/?page=${pageNum}`;
+        : `https://www.kenbiya.com/pp0/n-${pageNum}/`;
 
       console.log(`Fetching page ${pageNum}: ${url}`);
       await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
@@ -71,8 +71,6 @@ async function main() {
       console.log(`  Found ${properties.length} properties`);
       if (properties.length === 0) break;
       allProperties.push(...properties);
-      const hasNext = await page.$(".btn_paging a[href*='page']");
-      if (!hasNext) break;
       if (pageNum < MAX_PAGES) await new Promise(r => setTimeout(r, DELAY_MS));
     }
   } catch (err) {
