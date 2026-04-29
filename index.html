@@ -206,9 +206,9 @@
     <div class="filter-section">
       <div class="filter-label">利回り（%）</div>
       <div class="filter-group">
-        <input type="number" id="yield-min" placeholder="下限" min="0" step="0.5">
+        <input type="number" id="yield-min" placeholder="下限" min="0" step="0.5" value="5">
         <div class="range-sep">〜</div>
-        <input type="number" id="yield-max" placeholder="上限" min="0" step="0.5" value="5">
+        <input type="number" id="yield-max" placeholder="上限" min="0" step="0.5" value="10">
       </div>
     </div>
     <div class="filter-section">
@@ -459,8 +459,8 @@ function resetFilters() {
   document.querySelectorAll('#structure-filters input').forEach(i => i.checked = true);
   document.getElementById('price-min').value = '1000';
   document.getElementById('price-max').value = '5000';
-  document.getElementById('yield-min').value = '';
-  document.getElementById('yield-max').value = '5';
+  document.getElementById('yield-min').value = '5';
+  document.getElementById('yield-max').value = '10';
   document.getElementById('age-max').value = '20';
   document.getElementById('walk-max').value = '10';
   const prefs = [...new Set(allData.map(p => p.prefecture).filter(Boolean))];
