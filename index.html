@@ -614,7 +614,10 @@ Object.entries(FILTER_STARTS).forEach(([id, start]) => {
   el.addEventListener('input', () => {
     const prev = el.dataset.prev;
     const v = el.value;
-    if (prev === '' && v !== '' && Number(v) === Number(el.min || 0)) {
+    const n = Number(v);
+    const minN = Number(el.min || 0);
+    const stepN = Number(el.step || 1);
+    if (prev === '' && v !== '' && (n === minN || n === stepN)) {
       el.dataset.prev = start;
       el.value = start;
       el.dispatchEvent(new Event('input', { bubbles: true }));
