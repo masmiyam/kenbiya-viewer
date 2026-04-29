@@ -215,8 +215,23 @@
       <input type="number" id="age-max" placeholder="例: 20" min="0" step="1">
     </div>
     <div class="filter-section">
+      <div class="filter-label">駅徒歩（分以内）</div>
+      <input type="number" id="walk-max" placeholder="例: 10" min="0" step="1">
+    </div>
+    <div class="filter-section">
       <div class="filter-label">都道府県</div>
       <select id="pref-filter"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">建物構造</div>
+      <div class="checkbox-list" id="structure-filters">
+        <label class="checkbox-item"><input type="checkbox" value="SRC造" checked> SRC造</label>
+        <label class="checkbox-item"><input type="checkbox" value="RC造" checked> RC造</label>
+        <label class="checkbox-item"><input type="checkbox" value="S造" checked> S造</label>
+        <label class="checkbox-item"><input type="checkbox" value="軽量鉄骨造" checked> 軽量鉄骨造</label>
+        <label class="checkbox-item"><input type="checkbox" value="木造" checked> 木造</label>
+        <label class="checkbox-item"><input type="checkbox" value="その他" checked> その他</label>
+      </div>
     </div>
     <div class="filter-section">
       <div class="filter-label">キーワード</div>
@@ -308,22 +323,29 @@ async function loadData() {
 
 function applyFilters() {
   const types = [...document.querySelectorAll('#type-filters input:checked')].map(i => i.value);
+  const structures = [...document.querySelectorAll('#structure-filters input:checked')].map(i => i.value);
   const priceMin = parseFloat(document.getElementById('price-min').value) || 0;
   const priceMax = parseFloat(document.getElementById('price-max').value) || Infinity;
   const yieldMin = parseFloat(document.getElementById('yield-min').value) || 0;
   const yieldMax = parseFloat(document.getElementById('yield-max').value) || Infinity;
   const ageMax   = parseFloat(document.getElementById('age-max').value)   || Infinity;
+  const walkMax  = parseFloat(document.getElementById('walk-max').value)  || Infinity;
   const pref     = document.getElementById('pref-filter').value;
   const kw       = document.getElementById('keyword').value.toLowerCase().trim();
 
   filtered = allData.filter(p => {
     if (types.length && !types.includes(p.type)) return false;
+    if (structures.length) {
+      const sc = p.structure || "その他";
+      if (!structures.includes(sc)) return false;
+    }
     if (p.priceMan != null && (p.priceMan < priceMin || p.priceMan > priceMax)) return false;
     if (p.yieldPct != null && (p.yieldPct < yieldMin || p.yieldPct > yieldMax)) return false;
     if (p.buildingAgeYears != null && p.buildingAgeYears > ageMax) return false;
+    if (walkMax !== Infinity && (p.trafficWalkMin == null || p.trafficWalkMin > walkMax)) return false;
     if (pref && p.prefecture !== pref) return false;
     if (kw) {
-      const hay = [p.name, p.address, p.prefecture, p.type, p.trafficLine, p.trafficStation]
+      const hay = [p.name, p.address, p.prefecture, p.type, p.trafficLine, p.trafficStation, p.structureRaw]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(kw)) return false;
     }
@@ -360,7 +382,7 @@ function renderTable() {
   const page = sorted.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   let html = '<div class="table-wrap"><table><thead><tr>' +
-    '<th>物件名・所在地</th><th>種別</th><th>価格</th><th>利回り</th><th>築年数</th><th>面積</th>' +
+    '<th>物件名・所在地</th><th>種別</th><th>構造</th><th>駅徒歩</th><th>価格</th><th>利回り</th><th>築年数</th><th>面積</th>' +
     '</tr></thead><tbody>';
 
   page.forEach(p => {
@@ -374,6 +396,8 @@ function renderTable() {
         (fmtTraffic(p) ? '<div class="td-sub">' + esc(fmtTraffic(p)) + '</div>' : '') +
       '</td>' +
       '<td>' + (p.type ? '<span class="badge">' + esc(p.type) + '</span>' : '') + '</td>' +
+      '<td>' + (p.structure ? '<span class="badge">' + esc(p.structure) + '</span>' : '−') + '</td>' +
+      '<td>' + (p.trafficWalkMin != null ? p.trafficWalkMin + '分' : '−') + '</td>' +
       '<td class="price-text">' + esc(fmtPrice(p)) + '</td>' +
       '<td class="' + yc + '">' + esc(fmtYield(p)) + '</td>' +
       '<td>' + esc(fmtAge(p)) + '</td>' +
@@ -410,7 +434,8 @@ function goPage(n) {
 
 function resetFilters() {
   document.querySelectorAll('#type-filters input').forEach(i => i.checked = true);
-  ['price-min','price-max','yield-min','yield-max','age-max'].forEach(id =>
+  document.querySelectorAll('#structure-filters input').forEach(i => i.checked = true);
+  ['price-min','price-max','yield-min','yield-max','age-max','walk-max'].forEach(id =>
     document.getElementById(id).value = '');
   document.getElementById('pref-filter').value = '';
   document.getElementById('keyword').value = '';
@@ -434,6 +459,8 @@ async function downloadExcel() {
     ws.columns = [
       { header: '物件名',       key: 'name',           width: 36 },
       { header: '種別',         key: 'type',           width: 16 },
+      { header: '構造',         key: 'structure',      width: 12 },
+      { header: '構造（原文）', key: 'structureRaw',   width: 24 },
       { header: '価格（万円）', key: 'priceMan',       width: 12 },
       { header: '価格表記',     key: 'priceLabel',     width: 14 },
       { header: '利回り（%）',  key: 'yieldPct',       width: 10 },
@@ -463,6 +490,8 @@ async function downloadExcel() {
       const row = ws.addRow({
         name:             p.name || '',
         type:             p.type || '',
+        structure:        p.structure || '',
+        structureRaw:     p.structureRaw || '',
         priceMan:         p.priceMan ?? null,
         priceLabel:       p.priceLabel || '',
         yieldPct:         p.yieldPct ?? null,
@@ -501,7 +530,7 @@ async function downloadExcel() {
       }
     });
 
-    ws.autoFilter = { from: 'A1', to: 'Q1' };
+    ws.autoFilter = { from: 'A1', to: 'S1' };
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
@@ -520,9 +549,9 @@ async function downloadExcel() {
   }
 }
 
-document.querySelectorAll('#type-filters input, #pref-filter').forEach(el =>
+document.querySelectorAll('#type-filters input, #structure-filters input, #pref-filter').forEach(el =>
   el.addEventListener('change', applyFilters));
-['price-min','price-max','yield-min','yield-max','age-max','keyword'].forEach(id =>
+['price-min','price-max','yield-min','yield-max','age-max','walk-max','keyword'].forEach(id =>
   document.getElementById(id).addEventListener('input', applyFilters));
 
 loadData();
