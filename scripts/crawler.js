@@ -2,9 +2,14 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 
-const OUTPUT_PATH = path.join(__dirname, "../data/properties.json");
+const DAILY_DIR = path.join(__dirname, "../data/daily");
+const LATEST_PATH = path.join(__dirname, "../data/latest.json");
 const MAX_PAGES = parseInt(process.env.MAX_PAGES || "700");
 const DELAY_MS = parseInt(process.env.DELAY_MS || "1500");
+
+function jstDateStr() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Tokyo" });
+}
 
 const PREFECTURES = [
   "北海道", "青森県", "岩手県", "宮城県", "秋田県", "山形県", "福島県",
@@ -200,24 +205,23 @@ async function main() {
     await browser.close();
   }
 
-  let existing = [];
-  if (fs.existsSync(OUTPUT_PATH)) {
-    try {
-      existing = JSON.parse(fs.readFileSync(OUTPUT_PATH, "utf8")).properties || [];
-    } catch {}
-  }
-  const map = new Map(existing.filter((p) => p && p.id).map((p) => [p.id, p]));
-  allProperties.forEach((p) => { if (p.id) map.set(p.id, p); });
-  const merged = Array.from(map.values()).map((p, i) => ({ no: i + 1, ...p }));
+  const dateStr = jstDateStr();
+  const properties = allProperties
+    .filter((p) => p && p.id)
+    .map((p, i) => ({ no: i + 1, ...p }));
 
   const output = {
+    date: dateStr,
     lastUpdated: new Date().toISOString(),
-    totalCount: merged.length,
-    properties: merged,
+    totalCount: properties.length,
+    properties,
   };
-  fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
-  fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2), "utf8");
-  console.log(`Saved ${merged.length} properties`);
+  const dailyPath = path.join(DAILY_DIR, `${dateStr}.json`);
+  fs.mkdirSync(DAILY_DIR, { recursive: true });
+  const json = JSON.stringify(output, null, 2);
+  fs.writeFileSync(dailyPath, json, "utf8");
+  fs.writeFileSync(LATEST_PATH, json, "utf8");
+  console.log(`Saved ${properties.length} properties to ${dailyPath}`);
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
