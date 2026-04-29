@@ -602,6 +602,28 @@ document.querySelectorAll('#structure-filters input, #pref-filter').forEach(el =
 ['price-min','price-max','yield-min','yield-max','age-max','walk-max','keyword'].forEach(id =>
   document.getElementById(id).addEventListener('input', applyFilters));
 
+const FILTER_STARTS = {
+  'price-min': '1000', 'price-max': '5000',
+  'yield-min': '5',    'yield-max': '10',
+  'age-max':   '20',   'walk-max':  '10',
+};
+Object.entries(FILTER_STARTS).forEach(([id, start]) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.dataset.prev = '';
+  el.addEventListener('input', () => {
+    const prev = el.dataset.prev;
+    const v = el.value;
+    if (prev === '' && v !== '' && Number(v) === Number(el.min || 0)) {
+      el.dataset.prev = start;
+      el.value = start;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    el.dataset.prev = v;
+  });
+});
+
 loadData();
 </script>
 </body>
