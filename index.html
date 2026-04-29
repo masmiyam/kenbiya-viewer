@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>健美家 収益物件ビューア</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f4f0;
+      --surface: #ffffff;
+      --border: rgba(0,0,0,0.12);
+      --text: #1a1a18;
+      --text-2: #5a5a56;
+      --text-3: #9a9a96;
+      --accent: #1D9E75;
+      --accent-bg: #E1F5EE;
+    }
+    body {
+      font-family: -apple-system, 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo { font-size: 16px; font-weight: 600; }
+    .logo span { color: var(--accent); }
+    .meta { font-size: 12px; color: var(--text-3); }
+    .layout {
+      display: grid;
+      grid-template-columns: 272px 1fr;
+      min-height: calc(100vh - 56px);
+    }
+    aside {
+      background: var(--surface);
+      border-right: 0.5px solid var(--border);
+      padding: 20px 16px;
+      overflow-y: auto;
+      position: sticky;
+      top: 56px;
+      height: calc(100vh - 56px);
+    }
+    .filter-section { margin-bottom: 20px; }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 8px;
+    }
+    .filter-group { display: flex; gap: 6px; align-items: center; }
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      height: 34px;
+      padding: 0 10px;
+      border: 0.5px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    .range-sep { font-size: 12px; color: var(--text-3); flex-shrink: 0; }
+    .checkbox-list { display: flex; flex-direction: column; gap: 6px; }
+    .checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+    .checkbox-item input { width: 14px; height: 14px; accent-color: var(--accent); }
+    .btn-reset {
+      width: 100%; height: 34px;
+      background: none; border: 0.5px solid var(--border);
+      border-radius: 6px; cursor: pointer;
+      font-size: 13px; color: var(--text-2); font-family: inherit;
+    }
+    .btn-reset:hover { background: var(--bg); }
+    main { padding: 20px 24px; overflow: hidden; }
+    .toolbar {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px; gap: 12px;
+    }
+    .result-count { font-size: 13px; color: var(--text-2); }
+    .result-count strong { color: var(--text); font-weight: 600; }
+    .toolbar-right { display: flex; align-items: center; gap: 10px; }
+    select.sort-select {
+      width: auto; padding: 0 28px 0 10px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239a9a96'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      appearance: none;
+    }
+    .btn-excel {
+      height: 34px; padding: 0 16px;
+      background: var(--accent); color: white;
+      border: none; border-radius: 6px; cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      display: flex; align-items: center; gap: 6px;
+      white-space: nowrap; transition: opacity 0.15s;
+    }
+    .btn-excel:hover { opacity: 0.88; }
+    .btn-excel:disabled { opacity: 0.4; cursor: not-allowed; }
+    .table-wrap {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { background: var(--bg); border-bottom: 0.5px solid var(--border); }
+    th {
+      padding: 10px 12px; text-align: left;
+      font-weight: 600; font-size: 11px; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+    }
+    tbody tr { border-bottom: 0.5px solid var(--border); transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fafaf8; }
+    td { padding: 10px 12px; vertical-align: middle; }
+    .td-name a { color: var(--text); text-decoration: none; font-weight: 500; }
+    .td-name a:hover { color: var(--accent); }
+    .td-sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 500;
+      background: var(--accent-bg); color: #085041;
+    }
+    .yield-high { font-weight: 600; color: #27500A; }
+    .yield-mid  { font-weight: 600; color: #633806; }
+    .yield-low  { color: #712B13; }
+    .price-text { font-weight: 600; }
+    .empty { text-align: center; padding: 60px 20px; color: var(--text-3); }
+    .empty-icon { font-size: 32px; margin-bottom: 8px; }
+    .loading { text-align: center; padding: 60px 20px; color: var(--text-3); }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .pagination {
+      display: flex; align-items: center;
+      justify-content: center; gap: 6px; margin-top: 16px;
+    }
+    .page-btn {
+      min-width: 32px; height: 32px; padding: 0 8px;
+      border: 0.5px solid var(--border); border-radius: 6px;
+      background: var(--surface); cursor: pointer;
+      font-size: 13px; color: var(--text-2); font-family: inherit;
+    }
+    .page-btn:hover { background: var(--bg); }
+    .page-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">健美家 <span>収益物件</span> ビューア</div>
+  <div class="meta" id="last-updated">読み込み中...</div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="filter-section">
+      <div class="filter-label">物件種別</div>
+      <div class="checkbox-list" id="type-filters">
+        <label class="checkbox-item"><input type="checkbox" value="アパート" checked> アパート</label>
+        <label class="checkbox-item"><input type="checkbox" value="マンション" checked> マンション</label>
+        <label class="checkbox-item"><input type="checkbox" value="一棟" checked> 一棟</label>
+        <label class="checkbox-item"><input type="checkbox" value="戸建" checked> 戸建</label>
+        <label class="checkbox-item"><input type="checkbox" value="土地" checked> 土地</label>
+        <label class="checkbox-item"><input type="checkbox" value="その他" checked> その他</label>
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">価格（万円）</div>
+      <div class="filter-group">
+        <input type="number" id="price-min" placeholder="下限" min="0" step="100">
+        <div class="range-sep">〜</div>
+        <input type="number" id="price-max" placeholder="上限" min="0" step="100">
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">利回り（%）</div>
+      <div class="filter-group">
+        <input type="number" id="yield-min" placeholder="下限" min="0" step="0.5">
+        <div class="range-sep">〜</div>
+        <input type="number" id="yield-max" placeholder="上限" min="0" step="0.5">
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">築年数（年以内）</div>
+      <input type="number" id="age-max" placeholder="例: 20" min="0" step="1">
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">都道府県</div>
+      <select id="pref-filter"><option value="">すべて</option></select>
+    </div>
+    <div class="filter-section">
+      <div class="filter-label">キーワード</div>
+      <input type="text" id="keyword" placeholder="物件名・住所など">
+    </div>
+    <button class="btn-reset" onclick="resetFilters()">フィルタをリセット</button>
+  </aside>
+
+  <main>
+    <div class="toolbar">
+      <div class="result-count" id="result-count">読み込み中...</div>
+      <div class="toolbar-right">
+        <select class="sort-select" id="sort-select" onchange="renderTable()">
+          <option value="crawledAt_desc">取得日時（新しい順）</option>
+          <option value="price_asc">価格（安い順）</option>
+          <option value="price_desc">価格（高い順）</option>
+          <option value="yield_desc">利回り（高い順）</option>
+          <option value="yield_asc">利回り（低い順）</option>
+          <option value="age_asc">築年数（新しい順）</option>
+        </select>
+        <button class="btn-excel" onclick="downloadExcel()" id="excel-btn" disabled>
+          &#8595; Excel ダウンロード
+        </button>
+      </div>
+    </div>
+    <div id="table-container">
+      <div class="loading"><div class="spinner"></div>データを読み込んでいます...</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+let allData = [];
+let filtered = [];
+const PER_PAGE = 50;
+let currentPage = 1;
+
+async function loadData() {
+  try {
+    const res = await fetch('data/properties.json?t=' + Date.now());
+    const json = await res.json();
+    allData = json.properties || [];
+    if (json.lastUpdated) {
+      const d = new Date(json.lastUpdated);
+      document.getElementById('last-updated').textContent =
+        '最終更新: ' + d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+    }
+    const prefs = [...new Set(allData.map(p => p.prefecture).filter(Boolean))].sort();
+    const sel = document.getElementById('pref-filter');
+    prefs.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p; sel.appendChild(o);
+    });
+    applyFilters();
+  } catch (e) {
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty"><div class="empty-icon">&#9888;</div>データの読み込みに失敗しました</div>';
+    document.getElementById('result-count').textContent = 'エラー';
+  }
+}
+
+function applyFilters() {
+  const types = [...document.querySelectorAll('#type-filters input:checked')].map(i => i.value);
+  const priceMin = parseFloat(document.getElementById('price-min').value) || 0;
+  const priceMax = parseFloat(document.getElementById('price-max').value) || Infinity;
+  const yieldMin = parseFloat(document.getElementById('yield-min').value) || 0;
+  const yieldMax = parseFloat(document.getElementById('yield-max').value) || Infinity;
+  const ageMax   = parseFloat(document.getElementById('age-max').value)   || Infinity;
+  const pref     = document.getElementById('pref-filter').value;
+  const kw       = document.getElementById('keyword').value.toLowerCase().trim();
+
+  filtered = allData.filter(p => {
+    if (types.length && p.type && !types.some(t => p.type.includes(t))) return false;
+    if (p.priceRaw > 0 && (p.priceRaw < priceMin || p.priceRaw > priceMax)) return false;
+    if (p.yieldRaw > 0 && (p.yieldRaw < yieldMin || p.yieldRaw > yieldMax)) return false;
+    if (p.buildingAgeRaw > 0 && p.buildingAgeRaw > ageMax) return false;
+    if (pref && p.prefecture !== pref) return false;
+    if (kw) {
+      const hay = [p.name, p.location, p.prefecture, p.type].join(' ').toLowerCase();
+      if (!hay.includes(kw)) return false;
+    }
+    return true;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  const [sortKey, sortDir] = document.getElementById('sort-select').value.split('_');
+  const asc = sortDir === 'asc';
+  const sorted = [...filtered].sort((a, b) => {
+    let va, vb;
+    if (sortKey === 'price') { va = a.priceRaw; vb = b.priceRaw; }
+    else if (sortKey === 'yield') { va = a.yieldRaw; vb = b.yieldRaw; }
+    else if (sortKey === 'age') { va = a.buildingAgeRaw; vb = b.buildingAgeRaw; }
+    else { va = new Date(a.crawledAt || 0); vb = new Date(b.crawledAt || 0); }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * (asc ? 1 : -1);
+  });
+
+  document.getElementById('result-count').innerHTML =
+    '<strong>' + sorted.length.toLocaleString() + '</strong> 件';
+  document.getElementById('excel-btn').disabled = sorted.length === 0;
+
+  if (sorted.length === 0) {
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty"><div class="empty-icon">&#128269;</div>条件に一致する物件が見つかりません</div>';
+    document.getElementById('pagination').innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(sorted.length / PER_PAGE);
+  const page = sorted.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
+
+  let html = '<div class="table-wrap"><table><thead><tr>' +
+    '<th>物件名・所在地</th><th>種別</th><th>価格</th><th>利回り</th><th>築年数</th><th>面積</th>' +
+    '</tr></thead><tbody>';
+
+  page.forEach(p => {
+    const yr = p.yieldRaw;
+    const yc = yr >= 10 ? 'yield-high' : yr >= 7 ? 'yield-mid' : yr > 0 ? 'yield-low' : '';
+    html += '<tr>' +
+      '<td class="td-name">' +
+        (p.url ? '<a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.name || '（名称なし）') + '</a>'
+                : esc(p.name || '（名称なし）')) +
+        '<div class="td-sub">' + esc(p.location || p.prefecture || '') + '</div>' +
+      '</td>' +
+      '<td>' + (p.type ? '<span class="badge">' + esc(p.type) + '</span>' : '') + '</td>' +
+      '<td class="price-text">' + (p.price ? esc(p.price) : '−') + '</td>' +
+      '<td class="' + yc + '">' + (p.yield ? esc(p.yield) : '−') + '</td>' +
+      '<td>' + (p.buildingAge ? esc(p.buildingAge) : '−') + '</td>' +
+      '<td>' + (p.area ? esc(p.area) : '−') + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('table-container').innerHTML = html;
+  renderPagination(totalPages);
+}
+
+function renderPagination(total) {
+  if (total <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  let html = '<button class="page-btn" onclick="goPage(' + (currentPage - 1) + ')"' +
+    (currentPage === 1 ? ' disabled' : '') + '>&#8592;</button>';
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - currentPage) <= 2) {
+      html += '<button class="page-btn' + (i === currentPage ? ' active' : '') +
+        '" onclick="goPage(' + i + ')">' + i + '</button>';
+    } else if (Math.abs(i - currentPage) === 3) {
+      html += '<span style="color:var(--text-3);padding:0 4px">…</span>';
+    }
+  }
+  html += '<button class="page-btn" onclick="goPage(' + (currentPage + 1) + ')"' +
+    (currentPage === total ? ' disabled' : '') + '>&#8594;</button>';
+  document.getElementById('pagination').innerHTML = html;
+}
+
+function goPage(n) {
+  currentPage = n;
+  renderTable();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetFilters() {
+  document.querySelectorAll('#type-filters input').forEach(i => i.checked = true);
+  ['price-min','price-max','yield-min','yield-max','age-max'].forEach(id =>
+    document.getElementById(id).value = '');
+  document.getElementById('pref-filter').value = '';
+  document.getElementById('keyword').value = '';
+  applyFilters();
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function downloadExcel() {
+  const btn = document.getElementById('excel-btn');
+  btn.disabled = true;
+  btn.textContent = '生成中...';
+  try {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Kenbiya Viewer';
+    const ws = wb.addWorksheet('収益物件一覧');
+    ws.columns = [
+      { header: '物件名',      key: 'name',         width: 36 },
+      { header: '種別',        key: 'type',         width: 14 },
+      { header: '価格（万円）', key: 'priceRaw',    width: 14 },
+      { header: '利回り（%）', key: 'yieldRaw',     width: 12 },
+      { header: '築年数',      key: 'buildingAge',  width: 10 },
+      { header: '面積',        key: 'area',         width: 14 },
+      { header: '所在地',      key: 'location',     width: 30 },
+      { header: '都道府県',    key: 'prefecture',   width: 10 },
+      { header: 'URL',         key: 'url',          width: 50 },
+      { header: '取得日時',    key: 'crawledAt',    width: 20 },
+    ];
+
+    const hr = ws.getRow(1);
+    hr.eachCell(cell => {
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, name: 'Arial', size: 10 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1D9E75' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    });
+    hr.height = 22;
+
+    filtered.forEach((p, i) => {
+      const row = ws.addRow({
+        name:        p.name || '',
+        type:        p.type || '',
+        priceRaw:    p.priceRaw  || null,
+        yieldRaw:    p.yieldRaw  || null,
+        buildingAge: p.buildingAge || '',
+        area:        p.area || '',
+        location:    p.location || '',
+        prefecture:  p.prefecture || '',
+        url:         p.url || '',
+        crawledAt:   p.crawledAt ? new Date(p.crawledAt).toLocaleString('ja-JP') : '',
+      });
+
+      if (i % 2 === 1) {
+        row.eachCell(cell => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F4F0' } };
+        });
+      }
+
+      const yc = row.getCell('yieldRaw');
+      if (p.yieldRaw >= 10)     yc.font = { bold: true, color: { argb: 'FF27500A' } };
+      else if (p.yieldRaw >= 7) yc.font = { bold: true, color: { argb: 'FF633806' } };
+      else if (p.yieldRaw > 0)  yc.font = { color: { argb: 'FF712B13' } };
+
+      if (p.priceRaw) row.getCell('priceRaw').numFmt = '#,##0';
+      if (p.yieldRaw) row.getCell('yieldRaw').numFmt = '0.00';
+
+      if (p.url) {
+        const uc = row.getCell('url');
+        uc.value = { text: '物件詳細', hyperlink: p.url };
+        uc.font = { color: { argb: 'FF185FA5' }, underline: true };
+      }
+    });
+
+    ws.autoFilter = { from: 'A1', to: 'J1' };
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const buf = await wb.xlsx.writeBuffer();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([buf], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }));
+    a.download = 'kenbiya_' + new Date().toISOString().slice(0, 10) + '.xlsx';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) {
+    alert('Excel生成に失敗しました: ' + e.message);
+  } finally {
+    btn.disabled = filtered.length === 0;
+    btn.textContent = '↓ Excel ダウンロード';
+  }
+}
+
+document.querySelectorAll('#type-filters input, #pref-filter').forEach(el =>
+  el.addEventListener('change', applyFilters));
+['price-min','price-max','yield-min','yield-max','age-max','keyword'].forEach(id =>
+  document.getElementById(id).addEventListener('input', applyFilters));
+
+loadData();
+</script>
+</body>
+</html>

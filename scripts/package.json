@@ -1,0 +1,11 @@
+{
+  "name": "kenbiya-crawler",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "crawl": "node crawler.js"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0"
+  }
+}
