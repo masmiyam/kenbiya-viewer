@@ -226,12 +226,12 @@
     <div class="filter-section">
       <div class="filter-label">建物構造</div>
       <div class="checkbox-list" id="structure-filters">
-        <label class="checkbox-item"><input type="checkbox" value="SRC造" checked> SRC造</label>
-        <label class="checkbox-item"><input type="checkbox" value="RC造" checked> RC造</label>
-        <label class="checkbox-item"><input type="checkbox" value="S造" checked> S造</label>
-        <label class="checkbox-item"><input type="checkbox" value="軽量鉄骨造" checked> 軽量鉄骨造</label>
-        <label class="checkbox-item"><input type="checkbox" value="木造" checked> 木造</label>
-        <label class="checkbox-item"><input type="checkbox" value="その他" checked> その他</label>
+        <label class="checkbox-item"><input type="checkbox" value="SRC造" checked> <span>SRC造</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="RC造" checked> <span>RC造</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="S造" checked> <span>S造</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="軽量鉄骨造" checked> <span>軽量鉄骨造</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="木造" checked> <span>木造</span><span class="count"></span></label>
+        <label class="checkbox-item"><input type="checkbox" value="その他" checked> <span>その他</span><span class="count"></span></label>
       </div>
     </div>
     <div class="filter-section">
@@ -298,14 +298,22 @@ function fmtTraffic(p) {
 }
 function fmtLocation(p) { return p.address || p.prefecture || ""; }
 
-function updateTypeCounts() {
-  const counts = {};
-  allData.forEach(p => { if (p.type) counts[p.type] = (counts[p.type] || 0) + 1; });
-  document.querySelectorAll('#type-filters .checkbox-item').forEach(item => {
-    const value = item.querySelector('input').value;
-    const span = item.querySelector('.count');
-    span.textContent = (counts[value] || 0).toLocaleString();
+function updateFilterCounts() {
+  const typeCounts = {};
+  const structCounts = {};
+  allData.forEach(p => {
+    if (p.type) typeCounts[p.type] = (typeCounts[p.type] || 0) + 1;
+    const sc = p.structure || "その他";
+    structCounts[sc] = (structCounts[sc] || 0) + 1;
   });
+  const apply = (selector, counts) => {
+    document.querySelectorAll(selector + ' .checkbox-item').forEach(item => {
+      const v = item.querySelector('input').value;
+      item.querySelector('.count').textContent = '(' + (counts[v] || 0).toLocaleString() + ')';
+    });
+  };
+  apply('#type-filters', typeCounts);
+  apply('#structure-filters', structCounts);
 }
 
 async function loadData() {
@@ -324,7 +332,7 @@ async function loadData() {
       const o = document.createElement('option');
       o.value = p; o.textContent = p; sel.appendChild(o);
     });
-    updateTypeCounts();
+    updateFilterCounts();
     applyFilters();
   } catch (e) {
     document.getElementById('table-container').innerHTML =
