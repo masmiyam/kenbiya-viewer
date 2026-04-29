@@ -1,17 +1,3 @@
-const { chromium } = require("playwright");
-const fs = require("fs");
-const path = require("path");
-
-const OUTPUT_PATH = path.join(__dirname, "../data/properties.json");
-const MAX_PAGES = parseInt(process.env.MAX_PAGES || "5");
-const DELAY_MS = 2000;
-
-async function main() {
-  console.log(`[${new Date().toISOString()}] Crawler started`);
-
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     locale: "ja-JP",
   });
   const page = await context.newPage();
@@ -156,3 +142,4 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
