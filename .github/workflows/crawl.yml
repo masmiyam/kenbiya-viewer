@@ -2,23 +2,27 @@ name: Crawl Kenbiya Properties
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 毎時0分に実行（1時間ごと）
-  workflow_dispatch:        # 手動実行も可能
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
     permissions:
-      contents: write       # git push に必要
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
       - name: Install dependencies
         run: |
