@@ -8,6 +8,7 @@ on:
 jobs:
   crawl:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     permissions:
       contents: write
 
@@ -35,11 +36,15 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: Run crawler
+        env:
+          CONCURRENCY: '5'
+          DETAIL_DELAY_MS: '500'
         run: |
           cd scripts
           node crawler.js
 
       - name: Commit and push data
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
