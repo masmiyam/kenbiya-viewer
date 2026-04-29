@@ -1,1 +1,1 @@
-# kenbiya
+# kenbiya-viewer
