@@ -124,6 +124,7 @@ function postProcess(p) {
     floorsLabel: p.floorsLabel,
     structure: null,
     structureRaw: null,
+    broker: null,
     url,
     crawledAt: new Date().toISOString(),
   };
@@ -141,7 +142,11 @@ async function fetchDetails(context, properties) {
       const prev = JSON.parse(fs.readFileSync(LATEST_PATH, "utf8"));
       for (const p of prev.properties || []) {
         if (p.id && p.structureRaw) {
-          cache.set(p.id, { structure: p.structure, structureRaw: p.structureRaw });
+          cache.set(p.id, {
+            structure: p.structure,
+            structureRaw: p.structureRaw,
+            broker: p.broker || null,
+          });
         }
       }
     } catch (e) {
@@ -155,10 +160,11 @@ async function fetchDetails(context, properties) {
     if (c) {
       p.structure = c.structure;
       p.structureRaw = c.structureRaw;
+      p.broker = c.broker;
     }
   }
 
-  const targets = properties.filter((p) => p.id && p.url && !p.structureRaw);
+  const targets = properties.filter((p) => p.id && p.url && (!p.structureRaw || !p.broker));
   console.log(`Detail fetch needed: ${targets.length} / ${properties.length}`);
   if (targets.length === 0) return;
 
@@ -179,20 +185,27 @@ async function fetchDetails(context, properties) {
           aborted = true;
           break;
         }
-        const raw = await page.evaluate(() => {
+        const detail = await page.evaluate(() => {
+          let structureRaw = null;
           for (const dt of document.querySelectorAll("dt")) {
             const label = dt.textContent.trim();
             if (label === "建物構造/階数" || label === "建物構造") {
               const dd = dt.nextElementSibling;
               if (dd && dd.tagName === "DD") {
-                return dd.textContent.trim().replace(/\s+/g, " ");
+                structureRaw = dd.textContent.trim().replace(/\s+/g, " ");
+                break;
               }
             }
           }
-          return null;
+          let broker = null;
+          const text = document.body.innerText;
+          const m = text.match(/取扱不動産会社\s*\n\s*([^\n]+)/);
+          if (m) broker = m[1].trim();
+          return { structureRaw, broker };
         });
-        target.structureRaw = raw;
-        target.structure = categorizeStructure(raw);
+        target.structureRaw = detail.structureRaw;
+        target.structure = categorizeStructure(detail.structureRaw);
+        target.broker = detail.broker;
         consecutiveFailures = 0;
       } catch (e) {
         consecutiveFailures++;

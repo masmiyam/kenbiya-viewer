@@ -365,7 +365,7 @@ function applyFilters() {
     if (walkMax !== Infinity && (p.trafficWalkMin == null || p.trafficWalkMin > walkMax)) return false;
     if (pref && p.prefecture !== pref) return false;
     if (kw) {
-      const hay = [p.name, p.address, p.prefecture, p.type, p.trafficLine, p.trafficStation, p.structureRaw]
+      const hay = [p.name, p.address, p.prefecture, p.type, p.trafficLine, p.trafficStation, p.structureRaw, p.broker]
         .filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(kw)) return false;
     }
@@ -402,7 +402,7 @@ function renderTable() {
   const page = sorted.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
   let html = '<div class="table-wrap"><table><thead><tr>' +
-    '<th>物件名・所在地</th><th>種別</th><th>構造</th><th>駅徒歩</th><th>価格</th><th>利回り</th><th>築年数</th><th>面積</th>' +
+    '<th>物件名・所在地</th><th>種別</th><th>構造</th><th>駅徒歩</th><th>価格</th><th>利回り</th><th>築年数</th><th>面積</th><th>仲介業者</th>' +
     '</tr></thead><tbody>';
 
   page.forEach(p => {
@@ -422,6 +422,7 @@ function renderTable() {
       '<td class="' + yc + '">' + esc(fmtYield(p)) + '</td>' +
       '<td>' + esc(fmtAge(p)) + '</td>' +
       '<td>' + esc(fmtArea(p)) + '</td>' +
+      '<td>' + (p.broker ? esc(p.broker) : '−') + '</td>' +
       '</tr>';
   });
   html += '</tbody></table></div>';
@@ -494,6 +495,7 @@ async function downloadExcel() {
       { header: '駅',           key: 'trafficStation', width: 14 },
       { header: '駅徒歩(分)',   key: 'trafficWalkMin', width: 10 },
       { header: '階数',         key: 'floorsLabel',    width: 14 },
+      { header: '仲介業者',     key: 'broker',         width: 24 },
       { header: 'URL',          key: 'url',            width: 50 },
       { header: '取得日時',     key: 'crawledAt',      width: 20 },
     ];
@@ -525,6 +527,7 @@ async function downloadExcel() {
         trafficStation:   p.trafficStation || '',
         trafficWalkMin:   p.trafficWalkMin ?? null,
         floorsLabel:      p.floorsLabel || '',
+        broker:           p.broker || '',
         url:              p.url || '',
         crawledAt:        p.crawledAt ? new Date(p.crawledAt).toLocaleString('ja-JP') : '',
       });
@@ -550,7 +553,7 @@ async function downloadExcel() {
       }
     });
 
-    ws.autoFilter = { from: 'A1', to: 'S1' };
+    ws.autoFilter = { from: 'A1', to: 'T1' };
     ws.views = [{ state: 'frozen', ySplit: 1 }];
 
     const buf = await wb.xlsx.writeBuffer();
