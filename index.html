@@ -316,7 +316,8 @@ function buildTypeFilters() {
   });
   const html = types.map(t => {
     const label = TYPE_LABELS[t] || t;
-    return '<label class="checkbox-item"><input type="checkbox" value="' + esc(t) + '" checked> <span>' + esc(label) + '</span><span class="count"></span></label>';
+    const checked = t === '一棟売りアパート' ? 'checked' : '';
+    return '<label class="checkbox-item"><input type="checkbox" value="' + esc(t) + '" ' + checked + '> <span>' + esc(label) + '</span><span class="count"></span></label>';
   }).join('');
   document.getElementById('type-filters').innerHTML = html;
 }
@@ -478,7 +479,9 @@ function goPage(n) {
 }
 
 function resetFilters() {
-  document.querySelectorAll('#type-filters input').forEach(i => i.checked = true);
+  document.querySelectorAll('#type-filters input').forEach(i => {
+    i.checked = i.value === '一棟売りアパート';
+  });
   document.querySelectorAll('#structure-filters input').forEach(i => i.checked = true);
   ['price-min','price-max','yield-min','yield-max','age-max','walk-max'].forEach(id =>
     document.getElementById(id).value = '');
