@@ -238,6 +238,7 @@ async function main() {
   });
   const page = await context.newPage();
   const allProperties = [];
+  let consecutiveEmpty = 0;
 
   try {
     for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
@@ -246,12 +247,18 @@ async function main() {
         : `https://www.kenbiya.com/pp0/n-${pageNum}/`;
 
       console.log(`Fetching page ${pageNum}: ${url}`);
-      try {
-        await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
-      } catch (e) {
-        console.error(`  Page ${pageNum} navigation failed: ${e.message}`);
-        continue;
+      let navOk = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+          navOk = true;
+          break;
+        } catch (e) {
+          console.error(`  Page ${pageNum} navigation failed (attempt ${attempt}): ${e.message}`);
+          if (attempt < 2) await page.waitForTimeout(3000);
+        }
       }
+      if (!navOk) continue;
       await page.waitForTimeout(2000);
 
       const properties = await page.evaluate(() => {
@@ -313,8 +320,16 @@ async function main() {
       });
 
       console.log(`  Found ${properties.length} properties`);
-      if (properties.length === 0) break;
-      allProperties.push(...properties.map(postProcess));
+      if (properties.length === 0) {
+        consecutiveEmpty++;
+        if (consecutiveEmpty >= 3) {
+          console.log(`  3 consecutive empty pages, stopping listing crawl`);
+          break;
+        }
+      } else {
+        consecutiveEmpty = 0;
+        allProperties.push(...properties.map(postProcess));
+      }
       if (pageNum < MAX_PAGES) await new Promise((r) => setTimeout(r, DELAY_MS));
     }
   } catch (err) {
