@@ -246,6 +246,7 @@ async function main() {
   const page = await context.newPage();
   const allProperties = [];
   let consecutiveEmpty = 0;
+  let cooldownUsed = false;
 
   try {
     for (let pageNum = 1; pageNum <= MAX_PAGES; pageNum++) {
@@ -330,8 +331,15 @@ async function main() {
       if (properties.length === 0) {
         consecutiveEmpty++;
         if (consecutiveEmpty >= 3) {
-          console.log(`  3 consecutive empty pages, stopping listing crawl`);
-          break;
+          if (!cooldownUsed) {
+            console.log(`  3 consecutive empty pages — cooling down 5 min then retrying...`);
+            await page.waitForTimeout(5 * 60 * 1000);
+            consecutiveEmpty = 0;
+            cooldownUsed = true;
+          } else {
+            console.log(`  3 consecutive empty pages again after cooldown, stopping listing crawl`);
+            break;
+          }
         }
       } else {
         consecutiveEmpty = 0;
