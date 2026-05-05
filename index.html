@@ -314,9 +314,10 @@ function buildTypeFilters() {
     if (bi === -1) return -1;
     return ai - bi;
   });
+  const defaultChecked = new Set(['一棟売りアパート', '一棟売りマンション']);
   const html = types.map(t => {
     const label = TYPE_LABELS[t] || t;
-    const checked = t === '一棟売りアパート' ? 'checked' : '';
+    const checked = defaultChecked.has(t) ? 'checked' : '';
     return '<label class="checkbox-item"><input type="checkbox" value="' + esc(t) + '" ' + checked + '> <span>' + esc(label) + '</span><span class="count"></span></label>';
   }).join('');
   document.getElementById('type-filters').innerHTML = html;
@@ -479,8 +480,9 @@ function goPage(n) {
 }
 
 function resetFilters() {
+  const defaultChecked = new Set(['一棟売りアパート', '一棟売りマンション']);
   document.querySelectorAll('#type-filters input').forEach(i => {
-    i.checked = i.value === '一棟売りアパート';
+    i.checked = defaultChecked.has(i.value);
   });
   document.querySelectorAll('#structure-filters input').forEach(i => i.checked = true);
   ['price-min','price-max','yield-min','yield-max','age-max','walk-max'].forEach(id =>

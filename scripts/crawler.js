@@ -164,15 +164,16 @@ async function fetchDetails(context, properties) {
     }
   }
 
-  const priorityType = process.env.PRIORITY_TYPE || "一棟売りアパート";
+  const priorityTypes = (process.env.PRIORITY_TYPES || "一棟売りアパート,一棟売りマンション")
+    .split(",").map((s) => s.trim()).filter(Boolean);
+  const priorityRank = (t) => {
+    const i = priorityTypes.indexOf(t);
+    return i === -1 ? 999 : i;
+  };
   const targets = properties.filter((p) => p.id && p.url && (!p.structureRaw || !p.broker));
-  targets.sort((a, b) => {
-    const aP = a.type === priorityType ? 0 : 1;
-    const bP = b.type === priorityType ? 0 : 1;
-    return aP - bP;
-  });
-  const priorityCount = targets.filter((t) => t.type === priorityType).length;
-  console.log(`Detail fetch needed: ${targets.length} / ${properties.length} (priority "${priorityType}": ${priorityCount} first)`);
+  targets.sort((a, b) => priorityRank(a.type) - priorityRank(b.type));
+  const priorityCount = targets.filter((t) => priorityTypes.includes(t.type)).length;
+  console.log(`Detail fetch needed: ${targets.length} / ${properties.length} (priority [${priorityTypes.join(", ")}]: ${priorityCount} first)`);
   if (targets.length === 0) return;
 
   const queue = [...targets];
