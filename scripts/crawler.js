@@ -4,7 +4,7 @@ const path = require("path");
 
 const DAILY_DIR = path.join(__dirname, "../data/daily");
 const LATEST_PATH = path.join(__dirname, "../data/latest.json");
-const MAX_PAGES = parseInt(process.env.MAX_PAGES || "700");
+const MAX_PAGES = parseInt(process.env.MAX_PAGES || "1830");
 const DELAY_MS = parseInt(process.env.DELAY_MS || "1500");
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || "5");
 const DETAIL_DELAY_MS = parseInt(process.env.DETAIL_DELAY_MS || "500");
