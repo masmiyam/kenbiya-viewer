@@ -21,7 +21,7 @@ git push -u origin main
 3. Branch: `main` / `/ (root)`
 4. **Save**
 
-→ `https://masmiyam.github.io/kenbiya-viewer/` でサイトが公開されます
+→ `[https://masmiyam.github.io/kenbiya-viewer/](https://masmiyam.github.io/kenbiya-viewer/)` でサイトが公開されます
 
 ### 3. GitHub Actions の権限設定
 
