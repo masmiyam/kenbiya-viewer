@@ -164,8 +164,15 @@ async function fetchDetails(context, properties) {
     }
   }
 
+  const priorityType = process.env.PRIORITY_TYPE || "一棟売りアパート";
   const targets = properties.filter((p) => p.id && p.url && (!p.structureRaw || !p.broker));
-  console.log(`Detail fetch needed: ${targets.length} / ${properties.length}`);
+  targets.sort((a, b) => {
+    const aP = a.type === priorityType ? 0 : 1;
+    const bP = b.type === priorityType ? 0 : 1;
+    return aP - bP;
+  });
+  const priorityCount = targets.filter((t) => t.type === priorityType).length;
+  console.log(`Detail fetch needed: ${targets.length} / ${properties.length} (priority "${priorityType}": ${priorityCount} first)`);
   if (targets.length === 0) return;
 
   const queue = [...targets];
